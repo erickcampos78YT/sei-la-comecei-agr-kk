@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Simples</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #36393F;
+            color: #DCDDDE;
+            overflow: hidden; /* Evita a barra de rolagem horizontal */
+        }
+
+        #userSection {
+            max-width: 300px;
+            margin: 20px auto;
+            background-color: #2C2F33;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #appContainer {
+            display: flex;
+            height: 100vh;
+        }
+
+        #sideBar {
+            width: 200px;
+            background-color: #2C2F33;
+            overflow-y: auto;
+            padding: 10px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #chatContainer {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #messageContainer {
+            flex: 1;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #292B2F;
+            margin-bottom: 10px;
+        }
+
+        .message {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            background-color: #40444B;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 18px);
+            padding: 8px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #40444B;
+            color: #DCDDDE;
+        }
+
+        button {
+            width: calc(100% - 18px);
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background-color: #7289DA;
+            color: #DCDDDE;
+            cursor: pointer;
+        }
+
+        #sideBarToggle {
+            display: none;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        @media (max-width: 768px) {
+            #sideBar {
+                display: none;
+            }
+
+            #sideBarToggle {
+                display: block;
+            }
+
+            #appContainer.active-sidebar #sideBar {
+                display: block;
+            }
+
+            #appContainer.active-sidebar #chatContainer {
+                width: calc(100% - 200px);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="userSection">
+        <label for="username">Seu Nome:</label>
+        <input type="text" id="usernameInput" placeholder="Digite seu nome...">
+    </div>
+
+    <div id="appContainer">
+        <div id="sideBarToggle" onclick="toggleSidebar()">☰</div>
+
+        <div id="sideBar">
+            <h2>Chats</h2>
+            <ul id="chatList"></ul>
+            <input type="text" id="newChatInput" placeholder="Novo Chat">
+            <button onclick="addChat()">Criar Chat</button>
+        </div>
+
+        <div id="chatContainer">
+            <div id="messageContainer"></div>
+            <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        // Inicializa os chats do localStorage se existirem
+        const savedChats = JSON.parse(localStorage.getItem('chats')) || {};
+        const chatList = document.getElementById('chatList');
+        let activeChat = null;
+
+        // Atualiza a lista de chats na barra lateral
+        function updateChatList() {
+            chatList.innerHTML = '';
+            for (const chatName in savedChats) {
+                const chatItem = document.createElement('li');
+                chatItem.textContent = chatName;
+                chatItem.onclick = function() {
+                    switchChat(chatName);
+                };
+                chatList.appendChild(chatItem);
+            }
+        }
+
+        // Adiciona um novo chat
+        function addChat() {
+            const newChatInput = document.getElementById('newChatInput');
+            const newChatName = newChatInput.value.trim();
+
+            if (newChatName !== '') {
+                if (!savedChats[newChatName]) {
+                    savedChats[newChatName] = [];
+                    localStorage.setItem('chats', JSON.stringify(savedChats));
+                    updateChatList();
+                    newChatInput.value = '';
+                } else {
+                    alert('Este chat já existe.');
+                }
+            }
+        }
+
+        // Troca para um chat específico
+        function switchChat(chatName) {
+            activeChat = chatName;
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.innerHTML = '';
+
+            const chatMessages = savedChats[chatName] || [];
+            for (const message of chatMessages) {
+                appendMessage(message);
+            }
+        }
+
+        // Adiciona uma mensagem ao chat ativo
+        function sendMessage() {
+            const usernameInput = document.getElementById('usernameInput');
+            const messageInput = document.getElementById('messageInput');
+            
+            const username = usernameInput.value;
+            const messageText = messageInput.value;
+
+            if (username.trim() === '' || messageText.trim() === '') {
+                alert('Por favor, preencha seu nome e a mensagem.');
+                return;
+            }
+
+            const message = {
+                username: username,
+                text: messageText
+            };
+
+            appendMessage(message);
+            saveMessage(message);
+
+            messageInput.value = '';
+        }
+
+        // Adiciona uma mensagem à interface do usuário
+        function appendMessage(message) {
+            const messageContainer = document.getElementById('messageContainer');
+            const newMessage = document.createElement('div');
+            newMessage.classList.add('message');
+            newMessage.innerHTML = `<strong>${message.username}:</strong> ${message.text}`;
+            messageContainer.appendChild(newMessage);
+        }
+
+        // Salva uma mensagem no chat ativo
+        function saveMessage(message) {
+            if (activeChat) {
+                savedChats[activeChat].push(message);
+                localStorage.setItem('chats', JSON.stringify(savedChats));
+            }
+        }
+
+        // Inicialização
+        updateChatList();
+    </script>
+
+</body>
+              </html>
